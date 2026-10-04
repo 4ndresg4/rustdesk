@@ -1,0 +1,47 @@
+# Publishes a finished "Windows multisesion build" run as a public release,
+# so the office PCs can download it without logging in to GitHub.
+name: Publish multisesion release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run id of the Windows multisesion build"
+        required: true
+      tag:
+        description: "Release tag"
+        required: true
+        default: "multisesion-v1"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: RustDeskMulti-windows-x64
+          path: RustDeskMulti
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Zip
+        run: |
+          cd RustDeskMulti
+          zip -qr ../RustDeskMulti-windows-x64.zip .
+          cd ..
+          unzip -l RustDeskMulti-windows-x64.zip | head -40
+          sha256sum RustDeskMulti-windows-x64.zip
+
+      - name: Publish release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: ${{ inputs.tag }}
+          target_commitish: multisesion
+          name: RustDesk multisesion (${{ inputs.tag }})
+          prerelease: true
+          files: RustDeskMulti-windows-x64.zip

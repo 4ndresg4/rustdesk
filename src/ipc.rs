@@ -675,8 +675,36 @@ pub async fn start(postfix: &str) -> ResultType<()> {
     }
 }
 
+// A portable copy run in several Windows sessions at once (RDP Wrapper, terminal server) must not
+// share one pipe: the second session would connect to the first one's server and adopt its config,
+// ID included. The installed copy keeps the shared name because its service talks across sessions.
+#[cfg(windows)]
+fn session_scoped_ipc_path(postfix: &str) -> String {
+    static SUFFIX: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    let suffix = SUFFIX.get_or_init(|| {
+        if crate::platform::is_cur_exe_the_installed() {
+            return String::new();
+        }
+        crate::platform::windows::get_current_process_session_id()
+            .map(|sid| format!("_s{sid}"))
+            .unwrap_or_default()
+    });
+    if suffix.is_empty() {
+        return Config::ipc_path(postfix);
+    }
+    format!(
+        "\\\\.\\pipe\\{}{}\\query{}",
+        crate::get_app_name(),
+        suffix,
+        postfix
+    )
+}
+
 pub async fn new_listener(postfix: &str) -> ResultType<Incoming> {
+    #[cfg(not(windows))]
     let path = Config::ipc_path(postfix);
+    #[cfg(windows)]
+    let path = session_scoped_ipc_path(postfix);
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     let should_scrub_parent_entries = ensure_secure_ipc_parent_dir(&path, postfix)?;
     #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -1459,7 +1487,10 @@ pub async fn connect(ms_timeout: u64, postfix: &str) -> ResultType<ConnectionTmp
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
+        #[cfg(not(windows))]
         let path = Config::ipc_path(postfix);
+        #[cfg(windows)]
+        let path = session_scoped_ipc_path(postfix);
         connect_with_path(ms_timeout, &path).await
     }
 }

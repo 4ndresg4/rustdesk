@@ -59,19 +59,17 @@ if ($i -lt 0) {
 }
 [IO.File]::WriteAllLines($cfg2, [string[]]$l2, $utf8)
 
-# 5. Que arranque solo al iniciar sesion (y quitar accesos directos viejos de RustDesk).
+# 5. Quitar accesos directos viejos de RustDesk en Inicio. El arranque automatico
+#    lo hace la tarea que crea autoarranque.ps1 (se corre en la sesion principal).
 $inicio = [Environment]::GetFolderPath('Startup')
 $sh = New-Object -ComObject WScript.Shell
 Get-ChildItem $inicio -Filter *.lnk -ErrorAction SilentlyContinue | ForEach-Object {
     if ($sh.CreateShortcut($_.FullName).TargetPath -match 'rustdesk') { Remove-Item $_.FullName -Force }
 }
-$lnk = $sh.CreateShortcut((Join-Path $inicio 'RustDesk Telcco.lnk'))
-$lnk.TargetPath = $exe
-$lnk.WorkingDirectory = Split-Path $exe
-$lnk.Save()
 
 # 6. Abrir RustDesk.
 Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)
 Write-Host ''
 Write-Host "LISTO. Esta consulta queda con ID: $id" -ForegroundColor Green
 Write-Host 'En RustDesk: espera "Listo" abajo y pon la contrasena permanente (Ajustes > Seguridad).'
+Write-Host 'Cuando termines todas las consultas, corre autoarranque.ps1 en la sesion principal.'

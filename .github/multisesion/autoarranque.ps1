@@ -14,8 +14,9 @@ $usuarios = @(Get-LocalUser | Where-Object { $_.Name -match '^Consulta\d+$' -and
 if ($usuarios.Count -eq 0) { throw 'No encontre usuarios ConsultaN en este PC.' }
 
 $claseSesion = Get-CimClass -Namespace 'Root/Microsoft/Windows/TaskScheduler' -ClassName 'MSFT_TaskSessionStateChangeTrigger'
-# Sin limite de tiempo: por defecto Windows cierra las tareas a las 72 horas.
-$ajustes = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
+# Sin limite de tiempo (por defecto Windows cierra las tareas a las 72 horas) y con prioridad
+# normal (por defecto las tareas corren en prioridad baja y el video se pondria lento).
+$ajustes = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -Priority 4
 $accion = New-ScheduledTaskAction -Execute $exe -WorkingDirectory (Split-Path $exe)
 
 foreach ($u in $usuarios) {

@@ -15,7 +15,7 @@ if (-not (Test-Path $exe)) { throw "No encuentro $exe. Primero corre instalar-pc
 #    idioma (en espanol se llama "Finalizacion del proceso").
 $sub = '{0CCE922C-69AE-11D9-BED3-505054503030}'
 auditpol /set /subcategory:"$sub" /success:enable | Out-Null
-if ((auditpol /get /subcategory:"$sub") -notmatch 'Correcto|Success') {
+if ($LASTEXITCODE -ne 0) {
     Write-Warning 'No pude activar el registro de cierre de programas. El autoarranque por logon/reconexion sigue funcionando igual.'
 }
 
